@@ -12,8 +12,10 @@ public class TestGetRecommendations {
     public static void main(String[] args) {
 
         String urlStart = "http://localhost:8080/MovieRecommender/recommendations?user_id=";
-        int nbIterations = 1000;
+        int nbIterations = 10000;
         int userId = 0;
+        int maxUserID = 600;
+
         long startTime = System.nanoTime();
 
         for (int i = 0; i < nbIterations; i++) {
@@ -23,11 +25,33 @@ public class TestGetRecommendations {
             DataInputStream dis;
 
             try {
-                u = new URL(urlStart + userId);
-                is = u.openStream();
-                dis = new DataInputStream(new BufferedInputStream(is));
-                while (dis.readLine() != null) {
+                // if user connected can divide by 2
+                // this user connect to application 600 times
+                if ((userId % 2) == 0) {
+                    int cur = 0;
+                    while (cur < 600) {
+                        u = new URL(urlStart + userId);
+                        is = u.openStream();
+                        dis = new DataInputStream(new BufferedInputStream(is));
+                        while (dis.readLine() != null) {
+                        }
+                        cur +=1;
+                    }
                 }
+                // if user connected can divide by 5
+                // this user connect to application 1000 times
+                if ((userId % 5) == 0) {
+                    int cur = 0;
+                    while (cur < 1000) {
+                        u = new URL(urlStart + userId);
+                        is = u.openStream();
+                        dis = new DataInputStream(new BufferedInputStream(is));
+                        while (dis.readLine() != null) {
+                        }
+                    cur +=1;
+                    }
+                }
+                
                 System.out.println(i + "/" + nbIterations);
             } catch (MalformedURLException mue) {
                 System.err.println("Ouch - a MalformedURLException happened.");
@@ -43,6 +67,7 @@ public class TestGetRecommendations {
                 } catch (IOException ioe) {
                 }
             }
+            userId +=1;
         }
 
         long endTime = System.nanoTime();

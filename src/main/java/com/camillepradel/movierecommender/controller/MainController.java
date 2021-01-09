@@ -16,7 +16,7 @@ import com.camillepradel.movierecommender.model.db.MySqlDatabase;
 import com.camillepradel.movierecommender.model.db.Neo4jDatabase;
 import com.camillepradel.movierecommender.utils.CsvToMySql;
 //import com.camillepradel.movierecommender.model.db.Neo4jDatabase;
-//import com.camillepradel.movierecommender.model.db.MongodbDatabase;
+import com.camillepradel.movierecommender.model.db.MongodbDatabase;
 import javax.annotation.PostConstruct;
 
 @Controller
@@ -27,8 +27,8 @@ public class MainController {
     @PostConstruct
     public void init() {
         //this.db = new MySqlDatabase();
-        this.db = new Neo4jDatabase();
-//        this.db = new MongodbDatabase();
+        //this.db = new Neo4jDatabase();
+       this.db = new MongodbDatabase();
     }
     
     @RequestMapping("/hello")

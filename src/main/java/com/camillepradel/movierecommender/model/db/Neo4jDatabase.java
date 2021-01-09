@@ -170,31 +170,62 @@ public class Neo4jDatabase extends AbstractDatabase implements AutoCloseable {
     public List<Rating> processRecommendationsForUser(int userId, int processingMode) {
         // TODO: process recommendations for specified user exploiting other users ratings
         //       use different methods depending on processingMode parameter
-        Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        Genre genre2 = new Genre(2, "genre2");
-        List<Rating> recommendations = new LinkedList<>();
-        String titlePrefix;
-        switch (processingMode) {
-            case 0:
-                titlePrefix = "0_";
-                break;
-            case 1:
-                titlePrefix = "1_";
-                break;
-            case 2:
-                titlePrefix = "2_";
-                break;
-            default:
-                titlePrefix = "default_";
-                break;
-        }
-        recommendations.add(new Rating(new Movie(0, titlePrefix + "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 5));
-        recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
-        recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
-        recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
-        return recommendations;
+
+        List<Rating> recommendations = new LinkedList<Rating>();
+        
+        
+    	try ( Session session = driver.session() )
+  	    {
+    		session.readTransaction( tx -> {
+
+    	        String titlePrefix;
+    	        if (processingMode == 0) {
+    	        	//mode Utilisateur proche
+      	            Result result = tx.run( "MATCH (target_user:User {id :"+Integer.toString(userId)+"})-[:RATED]->(m:Movie)<-[:RATED]-(other_user:User)\r\n" + 
+      	            		"WITH other_user, count(distinct m.title) AS num_common_movies, target_user\r\n" + 
+      	            		"ORDER BY num_common_movies DESC\r\n" + 
+      	            		"LIMIT 1\r\n" + 
+      	            		"MATCH (other_user:User)-[rat_other_user:RATED]->(m2:Movie), (m2:Movie)-[:CATEGORIZED_AS]->(g:Genre)\r\n" + 
+      	            		"WHERE NOT ((target_user:User)-[:RATED]->(m2))\r\n" + 
+      	            		"RETURN m2.title AS rec_movie_title,  collect(g) as g , rat_other_user.note AS rating,other_user.id AS watched_by\r\n" + 
+      	            		"ORDER BY rat_other_user.note DESC");
+      	          
+      	          //pas de limite pour la variante 1 ...  
+      	          int nbReco = Integer.MAX_VALUE;
+      	          int i = 0;
+      	            while ( result.hasNext() && i <= nbReco)
+    	            {
+    	            	Record row = result.next();
+    	                String movieTitle = row.get(0).asString();
+    	                
+    	                Iterable<Value> genres = row.get(1).values();
+          	            List<Genre> movieGenres = new LinkedList<>();
+    	                genres.forEach(genre->{movieGenres.add(new Genre(genre.get("id").asInt(),genre.get("name").asString()));});
+
+          	            recommendations.add(new Rating(new Movie(0, movieTitle, movieGenres), userId, row.get(2).asInt()));
+          	            i++;
+    	            }
+      	                    
+    	            
+    	        } else if (processingMode == 1) {
+    	            titlePrefix = "1_";
+    	        } else if (processingMode == 2) {
+    	            titlePrefix = "2_";
+    	        } else {
+    	            titlePrefix = "default_";
+    	        }
+//    	        recommendations.add(new Rating(new Movie(0, titlePrefix + "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 5));
+//    	        recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
+//    	        recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
+//    	        recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
+//    	        
+    	        return null;
+  	        });
+    		
+  	    }
+    	return recommendations;
     }
+    
 
     @Override
     public void close() throws Exception {
